@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-Ass">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo do Animal - Simulação</title>
+    <!-- Carrega o Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilo da fonte Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Aplica a fonte Inter (puxada pela CDN do Tailwind) */
+        @import url('https://rsms.me/inter/inter.css');
+
+        html {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Oculta views por padrão */
+        .view {
+            display: none;
+        }
+
+        /* Animação de giro do slot */
+        @keyframes spin {
+            0% {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .slot-item-spinning {
+            animation: spin 0.1s linear;
+        }
+
+        /* Animação de pulso para ganhos */
+        @keyframes pulse-win {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 10px #facc15;
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px #fde047;
+            }
+        }
+
+        .slot-item-win {
+            animation: pulse-win 0.5s ease-in-out 3;
+            background-color: rgba(250, 204, 21, 0.2);
+            /* bg-yellow-400/20 */
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen">
+
+    <!-- Navegação Principal (visível após o login) -->
+    <nav id="navbar" class="bg-gray-800 p-4 sticky top-0 z-50 shadow-lg hidden">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="text-2xl font-bold text-yellow-400">Animal<span class="text-white">Jogo</span></div>
+            <div class="flex items-center space-x-4">
+                <button id="nav-home" class="hover:text-yellow-400">Início</button>
+                <button id="nav-deposit" class="hover:text-yellow-400">Depositar</button>
+                <button id="nav-withdraw" class="hover:text-yellow-400">Sacar</button>
+            </div>
+            <div class="flex items-center space-x-3">
+                <div id="user-info" class="text-sm">
+                    <div id="user-name" class="font-semibold"></div>
+                    <div id="user-balance" class="text-yellow-400 font-bold">Saldo: R$0,00</div>
+                </div>
+                <button id="logout-button"
+                    class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded-md text-sm font-medium">Sair</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Container Principal das Views -->
+    <div class="container mx-auto p-4 md:p-8">
+
+        <!-- View: Carregando -->
+        <div id="loading-view" class="view flex flex-col items-center justify-center min-h-[80vh]">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-yellow-400"></div>
+            <p class="mt-4 text-lg">Carregando...</p>
+        </div>
+
+        <!-- View: Login -->
+        <div id="login-view" class="view flex items-center justify-center min-h-[80vh]">
+            <div class="bg-gray-800 p-8 rounded-lg shadow-xl text-center w-full max-w-md">
+                <h1 class="text-3xl font-bold text-yellow-400 mb-6">Bem-vindo ao AnimalJogo</h1>
+                <p class="text-gray-300 mb-8">Plataforma de ganhos exponenciais.</p>
+                <button id="login-button"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center transition duration-200">
+                    <svg class="w-6 h-6 mr-3" viewBox="0 0 48 48">
+                        <path fill="#EA4335"
+                            d="M24 9.5c3.54 0 6.71 1.22 9.21 3.61l6.88-6.88C35.8 2.5 30.2 0 24 0 14.62 0 6.51 5.3 2.56 13.22l8.35 6.78C12.7 13.45 18.02 9.5 24 9.5z">
+                        </path>
+                        <path fill="#4285F4"
+                            d="M46.98 24.55c0-1.57-.15-3.09-.42-4.55H24v8.51h12.8c-.54 2.8-2.1 5.22-4.49 6.84l8.35 6.78c4.8-4.4 7.72-10.9 7.72-18.58z">
+                        </path>
+                        <path fill="#FBBC05"
+                            d="M10.91 28.19C10.33 26.37 10 24.48 10 22.5s.33-3.87.91-5.69l-8.35-6.78C1.03 14.15 0 18.22 0 22.5s1.03 8.35 2.56 12.09l8.35-6.4z">
+                        </path>
+                        <path fill="#34A853"
+                            d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-8.35-6.78c-2.15 1.45-4.92 2.3-8.04 2.3-6.17 0-11.42-4.1-13.29-9.7l-8.35 6.78C6.51 42.7 14.62 48 24 48z">
+                        </path>
+                        <path fill="none" d="M0 0h48v48H0z"></path>
+                    </svg>
+                    Entrar com Google
+                </button>
+            </div>
+        </div>
+
+        <!-- View: Início (Seleção de Animal) -->
+        <div id="home-view" class="view">
+            <h2 class="text-3xl font-bold text-center mb-8">Escolha seu Animal</h2>
+            <div id="animal-grid" class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <!-- Animais serão inseridos pelo JS -->
+            </div>
+        </div>
+
+        <!-- View: Jogo (Sorteio) -->
+        <div id="game-view" class="view">
+            <h2 id="game-title" class="text-4xl font-bold text-center mb-6 text-yellow-400"></h2>
+
+            <!-- A Grade do Jogo -->
+            <div class="flex justify-center mb-6">
+                <div id="slot-grid" class="grid grid-cols-3 gap-4 bg-gray-800 p-6 rounded-lg shadow-inner">
+                    <!-- 9 Itens do Sorteio -->
+                    <div
+                        class="slot-item w-24 h-24 md:w-32 md:h-32 bg-gray-700 rounded-lg flex items-center justify-center text-5xl md:text-6xl border-4 border-gray-600">
+                    </div>
+                    <div
+                        class="slot-item w-24 h-24 md:w-32 md:h-32 bg-gray-700 rounded-lg flex items-center justify-center text-5xl md:text-6xl border-4 border-gray-600">
+                    </div>
+                    <div
+                        class="slot-item w-24 h-24 md:w-32 md:h-32 bg-gray-700 rounded-lg flex items-center justify-center text-5xl md:text-6xl border-4 border-gray-600">
+                    </div>
+                    <div
+                        class="slot-item w-24 h-24 md:w-32 md:h-32 bg-gray-700 rounded-lg flex items-center justify-center text-5xl md:text-6xl border-4 border-gray-600">
+                    </div>
+                    <div
+                        class="slot-item w-24 h-24 md:w-32 md:h-32 bg-gray-700 rounded-lg flex items-center justify-center text-5xl md:text-6xl border-4 border-gray-600">
+                    </div>
+                    <div
+                        class="slot-item w-24 h-24 md:w-32 md:h-32 bg-gray-700 rounded-lg flex items-center justify-center text-5xl md:text-6xl border-4 border-gray-600">
+                    </div>
+                    <div
+                        class="slot-item w-24 h-24 md:w-32 md:h-32 bg-gray-700 rounded-lg flex items-center justify-center text-5xl md:text-6xl border-4 border-gray-600">
+                    </div>
+                    <div
+                        class="slot-item w-24 h-24 md:w-32 md:h-32 bg-gray-700 rounded-lg flex items-center justify-center text-5xl md:text-6xl border-4 border-gray-600">
+                    </div>
+                    <div
+                        class="slot-item w-24 h-24 md:w-32 md:h-32 bg-gray-700 rounded-lg flex items-center justify-center text-5xl md:text-6xl border-4 border-gray-600">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mensagem de Resultado -->
+            <div id="game-result-message" class="text-center text-2xl font-bold my-4 h-8"></div>
+
+            <!-- Controles do Jogo -->
+            <div class="flex flex-col items-center space-y-4">
+                <div class="flex items-center space-x-4">
+                    <button id="decrease-bet"
+                        class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg text-2xl">-</button>
+                    <div id="bet-amount-display"
+                        class="text-2xl font-bold bg-gray-800 px-6 py-3 rounded-lg w-48 text-center">Aposta: R$1,00
+                    </div>
+                    <button id="increase-bet"
+                        class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-lg text-2xl">+</button>
+                </div>
+                <button id="spin-button"
+                    class="bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-gray-900 font-bold py-4 px-20 rounded-lg text-2xl shadow-lg transform transition hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                    GIRAR
+                </button>
+            </div>
+        </div>
+
+        <!-- View: Depósito -->
+        <div id="deposit-view" class="view">
+            <div class="max-w-md mx-auto bg-gray-800 p-8 rounded-lg shadow-xl">
+                <h2 class="text-3xl font-bold text-center mb-6 text-yellow-400">Depositar</h2>
+                <p class="text-gray-300 text-center mb-4">O valor obrigatório do 1º depósito é de R$20,00</p>
+
+                <div class="mb-4">
+                    <label for="deposit-amount" class="block text-sm font-medium text-gray-300 mb-2">Valor do Depósito
+                        (R$)</label>
+                    <input type="number" id="deposit-amount"
+                        class="w-full bg-gray-600 text-gray-300 p-3 rounded-lg border border-gray-500 cursor-not-allowed"
+                        value="10" placeholder="R$20,00" disabled>
+                </div>
+            </div>
+
+
+            <div id="deposit-message" class="text-red-400 text-center h-5 mt-4"></div>
+            <p class="text-gray-300 text-center mb-4">Para fazer um depósito, copie a chave PIX abaixo e cole no seu
+                banco.</p>
+            <div class="bg-gray-700 p-4 rounded-lg mb-4">
+                <p class="text-sm text-gray-400 mb-2">Chave PIX:</p>
+                <div class="flex justify-between items-center">
+                    <span id="pix-key-display" class="text-lg font-mono"
+                        data-full-key="00020126580014BR.GOV.BCB.PIX01366c7bc477-9ade-4ba9-9177-000d5b9e2f87520400005303986540520.005802BR5925Alessandro
+                        Leonello Ribei6009SAO PAULO62140510cGjN9SHvoD6304502B">
+                        00020126580014...
+                    </span>
+                    <button id="copy-pix-button"
+                        class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-lg">Copiar</button>
+
+                </div>
+
+            </div>
+            <button id="confirm-deposit-button"
+                class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled>
+                Fazer Depósito
+            </button>
+            <div id="copy-message" class="text-green-400 text-center h-5"></div>
+
+            <p class="text-gray-400 text-sm text-center mt-4">Após o pagamento, seu saldo será atualizado
+                (automaticamente).</p>
+        </div>
+    </div>
+
+    <!-- View: Saque -->
+    <div id="withdraw-view" class="view">
+        <div class="max-w-md mx-auto bg-gray-800 p-8 rounded-lg shadow-xl">
+            <h2 class="text-3xl font-bold text-center mb-6 text-yellow-400">Sacar</h2>
+            <form id="withdraw-form">
+                <div class="mb-4">
+                    <label for="withdraw-key" class="block text-sm font-medium text-gray-300 mb-2">Sua Chave PIX</label>
+                    <input type="text" id="withdraw-key"
+                        class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        placeholder="email@provedor.com ou CPF">
+                </div>
+                <div class="mb-6">
+                    <label for="withdraw-amount" class="block text-sm font-medium text-gray-300 mb-2">Valor (R$)</label>
+                    <input type="number" id="withdraw-amount"
+                        class="w-full bg-gray-700 text-white p-3 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        placeholder="100,00">
+                </div>
+                <button id="withdraw-button" type="submit"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+                    Solicitar Saque
+                </button>
+            </form>
+            <div id="withdraw-message" class="text-red-400 text-center mt-6 text-lg font-semibold h-5"></div>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Importações do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            GoogleAuthProvider,
+            signInWithPopup,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            setDoc,
+            getDoc,
+            onSnapshot,
+            updateDoc,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuração do Firebase (VARIÁVEIS GLOBAIS FORNECIDAS) ---
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD6Y6TZe33813Fyt6RQP2FX-F1ojQhijsg",
+            authDomain: "tigrinho-e6b2d.firebaseapp.com",
+            projectId: "tigrinho-e6b2d",
+            storageBucket: "tigrinho-e6b2d.firebasestorage.app",
+            messagingSenderId: "883179406282",
+            appId: "1:883179406282:web:f6e1654a53b516ef034533"
+        };
+
+
+
+        // Define um ID para este aplicativo
+        const appId = 'jogo-animal-simulador'; // Pode ser qualquer nome
+
+        // Inicializa o Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- Definições do Jogo ---
+        const animals = {
+            tiger: { name: "Tigre", icon: "🐅", theme: ["🐅", "💎", "💰", "7️⃣", "🔔"], color: "text-orange-400" },
+            lion: { name: "Leão", icon: "🦁", theme: ["🦁", "👑", "🥩", "7️⃣", "🪙"], color: "text-yellow-500" },
+            elephant: { name: "Elefante", icon: "🐘", theme: ["🐘", "🥜", "🌿", "7️⃣", "💧"], color: "text-gray-400" },
+            rabbit: { name: "Coelho", icon: "🐇", theme: ["🐇", "🥕", "🍀", "7️⃣", "🍓"], color: "text-pink-400" }
+        };
+
+        // --- Estado Global do Aplicativo ---
+        let currentUserId = null;
+        let currentUserData = null;
+        let unsubscribeProfile = null; // Para limpar o listener do onSnapshot
+        let currentBet = 1;
+        const betStep = 1;
+        const maxBet = 50;
+        const minBet = 1;
+        let currentGameTheme = [];
+        let isSpinning = false;
+
+        // --- Seletores DOM ---
+        const views = document.querySelectorAll('.view');
+        const navbar = document.getElementById('navbar');
+        const loadingView = document.getElementById('loading-view');
+        const loginView = document.getElementById('login-view');
+        const homeView = document.getElementById('home-view');
+        const gameView = document.getElementById('game-view');
+        const depositView = document.getElementById('deposit-view');
+        const withdrawView = document.getElementById('withdraw-view');
+
+        const loginButton = document.getElementById('login-button');
+        const logoutButton = document.getElementById('logout-button');
+        const navHome = document.getElementById('nav-home');
+        const navDeposit = document.getElementById('nav-deposit');
+        const navWithdraw = document.getElementById('nav-withdraw');
+
+        const userNameDisplay = document.getElementById('user-name');
+        const userBalanceDisplay = document.getElementById('user-balance');
+        const animalGrid = document.getElementById('animal-grid');
+
+        const gameTitle = document.getElementById('game-title');
+        const slotGrid = document.getElementById('slot-grid');
+        const slotItems = document.querySelectorAll('.slot-item');
+        const betAmountDisplay = document.getElementById('bet-amount-display');
+        const decreaseBetButton = document.getElementById('decrease-bet');
+        const increaseBetButton = document.getElementById('increase-bet');
+        const spinButton = document.getElementById('spin-button');
+        const gameResultMessage = document.getElementById('game-result-message');
+
+        const pixKeyDisplay = document.getElementById('pix-key-display');
+        const copyPixButton = document.getElementById('copy-pix-button');
+        const copyMessage = document.getElementById('copy-message');
+
+        const depositAmountInput = document.getElementById('deposit-amount');
+        const confirmDepositButton = document.getElementById('confirm-deposit-button');
+        const depositMessage = document.getElementById('deposit-message');
+
+        const withdrawForm = document.getElementById('withdraw-form');
+        const withdrawMessage = document.getElementById('withdraw-message');
+
+        // --- Funções de Navegação ---
+        function showView(viewId) {
+            views.forEach(view => view.style.display = 'none');
+            const viewToShow = document.getElementById(viewId);
+            if (viewToShow) {
+                viewToShow.style.display = 'block';
+            }
+
+            // Mostra/Esconde a navbar
+            if (viewId === 'login-view' || viewId === 'loading-view') {
+                navbar.style.display = 'none';
+            } else {
+                navbar.style.display = 'block';
+            }
+            // ADICIONE ESTE BLOCO NO FINAL DA FUNÇÃO:
+            if (viewId === 'deposit-view') {
+                depositAmountInput.value = '';
+                depositMessage.textContent = '';
+                copyMessage.textContent = '';
+                confirmDepositButton.disabled = true; // Botão começa desabilitado
+            }
+        }
+
+        // --- Funções de Formatação ---
+        function formatCurrency(value) {
+            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // --- Funções de UI ---
+        function updateUI() {
+            if (currentUserData) {
+                userNameDisplay.textContent = `Olá, ${currentUserData.displayName.split(' ')[0]}`;
+                userBalanceDisplay.textContent = `Saldo: ${formatCurrency(currentUserData.balance)}`;
+            }
+        }
+
+        function populateAnimalGrid() {
+            animalGrid.innerHTML = ''; // Limpa a grade
+            for (const [key, animal] of Object.entries(animals)) {
+                const card = document.createElement('div');
+                card.className = `animal-card bg-gray-800 rounded-lg shadow-lg p-6 text-center cursor-pointer transform transition hover:scale-105 hover:shadow-yellow-500/30 border-2 border-transparent hover:border-yellow-400`;
+                card.dataset.animal = key;
+                card.innerHTML = `
+                    <div class="text-7xl mb-4">${animal.icon}</div>
+                    <h3 class="text-2xl font-bold ${animal.color}">${animal.name}</h3>
+                `;
+                animalGrid.appendChild(card);
+            }
+        }
+
+        function updateBetDisplay() {
+            betAmountDisplay.textContent = `Aposta: ${formatCurrency(currentBet)}`;
+            decreaseBetButton.disabled = (currentBet <= minBet);
+            increaseBetButton.disabled = (currentBet >= maxBet);
+        }
+
+        // --- Lógica de Autenticação ---
+
+        // Listener de estado de autenticação
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Usuário está logado
+                currentUserId = user.uid;
+                console.log("Usuário logado:", currentUserId);
+                // Configura o listener do perfil
+                setupProfileListener(currentUserId, user);
+                // Preenche a grade de animais
+                populateAnimalGrid();
+                // Mostra a tela inicial
+                showView('home-view');
+            } else {
+                // Usuário está deslogado
+                console.log("Usuário deslogado.");
+                currentUserId = null;
+                currentUserData = null;
+                // Para o listener anterior se existir
+                if (unsubscribeProfile) {
+                    unsubscribeProfile();
+                    unsubscribeProfile = null;
+                }
+                showView('login-view');
+            }
+        });
+
+        // Botão de Login
+        loginButton.addEventListener('click', async () => {
+            const provider = new GoogleAuthProvider();
+            try {
+                await signInWithPopup(auth, provider);
+                // O onAuthStateChanged vai cuidar da transição de tela
+            } catch (error) {
+                console.error("Erro ao fazer login com Google:", error);
+            }
+        });
+
+        // Botão de Logout
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                // O onAuthStateChanged vai cuidar da transição de tela
+            } catch (error) {
+                console.error("Erro ao fazer logout:", error);
+            }
+        });
+
+        // --- Lógica do Firestore ---
+
+        // Caminho do documento de perfil (privado do usuário)
+        function getProfileDocRef(userId) {
+            return doc(db, 'artifacts', appId, 'users', userId, 'userData', 'main');
+        }
+
+        // Configura o listener para o perfil do usuário
+        function setupProfileListener(userId, user) {
+            if (unsubscribeProfile) unsubscribeProfile(); // Cancela listener antigo
+
+            const docRef = getProfileDocRef(userId);
+
+            unsubscribeProfile = onSnapshot(docRef, async (docSnap) => {
+                if (docSnap.exists()) {
+                    // Documento existe, atualiza dados locais
+                    currentUserData = docSnap.data();
+                    console.log("Dados do usuário atualizados:", currentUserData);
+                    updateUI(); // Atualiza a UI com novos dados (ex: saldo)
+                } else {
+                    // Documento não existe, cria um novo perfil
+                    console.log("Perfil não encontrado, criando um novo...");
+                    const newUserProfile = {
+                        displayName: user.displayName || "Jogador",
+                        email: user.email,
+                        balance: 0.00, // Saldo inicial de R$ 100,00
+                        createdAt: serverTimestamp()
+                    };
+                    await setDoc(docRef, newUserProfile);
+                    // O onSnapshot vai pegar essa mudança e chamar updateUI()
+                }
+            }, (error) => {
+                console.error("Erro ao escutar perfil:", error);
+            });
+        }
+
+        // Função para atualizar o saldo (de forma segura)
+        async function updateUserBalance(newBalance) {
+            if (!currentUserId) return;
+            const docRef = getProfileDocRef(currentUserId);
+            try {
+                await updateDoc(docRef, { balance: newBalance });
+                // O onSnapshot atualizará o 'currentUserData' e a 'updateUI' localmente
+            } catch (error) {
+                console.error("Erro ao atualizar saldo:", error);
+            }
+        }
+
+        // --- Navegação da Navbar ---
+        navHome.addEventListener('click', () => showView('home-view'));
+        navDeposit.addEventListener('click', () => showView('deposit-view'));
+        navWithdraw.addEventListener('click', () => showView('withdraw-view'));
+
+        // --- Lógica da Tela Inicial (Seleção) ---
+        animalGrid.addEventListener('click', (e) => {
+            const card = e.target.closest('.animal-card');
+            if (card) {
+                const animalKey = card.dataset.animal;
+                startGame(animalKey);
+            }
+        });
+
+        // --- Lógica da Tela do Jogo ---
+        function startGame(animalKey) {
+            const animal = animals[animalKey];
+            currentGameTheme = animal.theme;
+            gameTitle.innerHTML = `<span class="mr-4">${animal.icon}</span> Jogo do ${animal.name}`;
+            gameTitle.className = `text-4xl font-bold text-center mb-6 ${animal.color}`;
+
+            // Reseta a grade
+            slotItems.forEach(item => {
+                item.textContent = '❓';
+                item.classList.remove('slot-item-win');
+            });
+            gameResultMessage.textContent = '';
+
+            currentBet = minBet;
+            updateBetDisplay();
+            showView('game-view');
+        }
+
+        // Controles de Aposta
+        decreaseBetButton.addEventListener('click', () => {
+            currentBet = Math.max(minBet, currentBet - betStep);
+            updateBetDisplay();
+        });
+
+        increaseBetButton.addEventListener('click', () => {
+            currentBet = Math.min(maxBet, currentBet + betStep);
+            updateBetDisplay();
+        });
+
+        // Botão de Girar
+        spinButton.addEventListener('click', handleSpin);
+
+        async function handleSpin() {
+            if (isSpinning) return;
+
+            if (currentUserData.balance < currentBet) {
+                gameResultMessage.textContent = "Saldo insuficiente!";
+                gameResultMessage.className = "text-center text-2xl font-bold my-4 h-8 text-red-500";
+                return;
+            }
+
+            isSpinning = true;
+            spinButton.disabled = true;
+            gameResultMessage.textContent = 'Girando...';
+            gameResultMessage.className = "text-center text-2xl font-bold my-4 h-8 text-gray-400";
+            slotItems.forEach(item => item.classList.remove('slot-item-win'));
+
+            // 1. Debita a aposta
+            const balanceAfterBet = currentUserData.balance - currentBet;
+            await updateUserBalance(balanceAfterBet);
+
+            // 2. Animação de giro
+            const spinInterval = setInterval(() => {
+                slotItems.forEach(item => {
+                    item.textContent = currentGameTheme[Math.floor(Math.random() * currentGameTheme.length)];
+                    item.classList.add('slot-item-spinning');
+                });
+                // Remove a classe de animação logo após para o próximo frame
+                setTimeout(() => slotItems.forEach(item => item.classList.remove('slot-item-spinning')), 100);
+            }, 100);
+
+            // 3. Para a animação e calcula o resultado
+            setTimeout(async () => {
+                clearInterval(spinInterval);
+
+                // 4. Gera o resultado final
+                const grid = [];
+                const counts = {};
+
+                slotItems.forEach(item => {
+                    const randomItem = currentGameTheme[Math.floor(Math.random() * currentGameTheme.length)];
+                    item.textContent = randomItem;
+                    grid.push(randomItem);
+                    // Conta os itens
+                    counts[randomItem] = (counts[randomItem] || 0) + 1;
+                });
+
+                // 5. Calcula os ganhos
+                let winnings = 0;
+                let winningItem = null;
+                for (const [item, count] of Object.entries(counts)) {
+                    if (count === 3) winnings = currentBet * 1.5;
+                    if (count === 4) winnings = currentBet * 2;
+                    if (count === 5) winnings = currentBet * 3;
+                    if (count === 6) winnings = currentBet * 5;
+                    if (count === 7) winnings = currentBet * 10;
+                    if (count === 8) winnings = currentBet * 20;
+                    if (count === 9) winnings = currentBet * 50; // Jackpot
+
+                    if (winnings > 0) winningItem = item;
+                }
+
+                // 6. Mostra o resultado e paga
+                if (winnings > 0) {
+                    gameResultMessage.textContent = `Você ganhou ${formatCurrency(winnings)}!`;
+                    gameResultMessage.className = "text-center text-2xl font-bold my-4 h-8 text-yellow-400";
+
+                    // Adiciona o prêmio ao saldo
+                    const finalBalance = balanceAfterBet + winnings;
+                    await updateUserBalance(finalBalance);
+
+                    // Destaca os itens ganhadores
+                    slotItems.forEach(item => {
+                        if (item.textContent === winningItem) {
+                            item.classList.add('slot-item-win');
+                        }
+                    });
+
+                } else {
+                    gameResultMessage.textContent = "Não foi dessa vez.";
+                    gameResultMessage.className = "text-center text-2xl font-bold my-4 h-8 text-gray-500";
+                }
+
+                isSpinning = false;
+                spinButton.disabled = false;
+            }, 1500); // Duração total do giro: 1.5 segundos
+        }
+
+        // --- Lógica de Depósito ---
+
+        // Função para copiar (usa a API moderna, mas com fallback)
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopyMessage(true);
+                }, () => {
+                    // Fallback para document.execCommand
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+
+        // Fallback para o 'copy'
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed"; // Evita rolagem
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                showCopyMessage(successful);
+            } catch (err) {
+                showCopyMessage(false);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function showCopyMessage(success) {
+            if (success) {
+                copyMessage.textContent = "Chave PIX copiada!";
+                confirmDepositButton.disabled = false; // <-- ADICIONE ESTA LINHA
+                setTimeout(() => { copyMessage.textContent = ''; }, 5000);
+
+                // REMOVA A LINHA ABAIXO:
+                // setTimeout(simulateDeposit, 5000); 
+            } else {
+               
+                copyMessage.classList.add('text-red-500');
+                setTimeout(() => {
+                    copyMessage.textContent = '';
+                    copyMessage.classList.remove('text-red-500');
+                }, 2000);
+            }
+        }
+
+        // SUBSTITUA A FUNÇÃO ANTIGA POR ESTA:
+        async function simulateDeposit(amount) {
+            // Adiciona validação
+            if (!currentUserData || !amount || amount <= 0) return;
+
+            // Usa o 'amount' do parâmetro
+            const depositAmount = parseFloat(amount); // Garante que é um número
+            if (isNaN(depositAmount)) return;
+
+            const newBalance = currentUserData.balance + depositAmount;
+            await updateUserBalance(newBalance);
+
+            // Alerta o usuário com o valor correto
+            alert(`Simulação de Depósito:\n+ ${formatCurrency(depositAmount)} adicionado ao seu saldo!`);
+
+            showView('home-view'); // Volta para o início
+        }
+       copyPixButton.addEventListener('click', () => {
+    // Pega a chave completa guardada no atributo 'data-full-key'
+    const fullKey = pixKeyDisplay.dataset.fullKey;
+    
+    // Manda copiar a chave completa, e não o texto visível
+    copyToClipboard(fullKey);
+});
+
+        // ADICIONE ESTE NOVO LISTENER:
+        confirmDepositButton.addEventListener('click', () => {
+            const amount = parseFloat(depositAmountInput.value);
+
+            // Validação do valor digitado
+           /* if (isNaN(amount) || amount <= 0) {
+                depositMessage.textContent = "Por favor, insira um valor válido.";
+                setTimeout(() => { depositMessage.textContent = ''; }, 3000);
+                return;
+            } */
+
+            // Desabilita o botão para evitar cliques duplos
+            confirmDepositButton.disabled = true;
+            confirmDepositButton.textContent = "Processando...";
+             copyMessage.textContent = "Cole a chave Pix no seu banco para fazer o pagamento e aguarde!";
+                showCopyMessage();
+
+            // Simula o tempo de processamento
+            setTimeout(() => {
+                simulateDeposit(20); // Chama a simulação com o valor
+                // Reseta o botão (embora a view vá mudar, é uma boa prática)
+                confirmDepositButton.disabled = false;
+                confirmDepositButton.textContent = "Fazer Depósito";
+            }, 15000); // Simula 1.5s de processamento
+        });
+
+        // --- Lógica de Saque ---
+        withdrawForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            withdrawMessage.textContent = "Para fazer um saque você precisa jogar mais 12 vezes";
+
+            // Limpa a mensagem após 3 segundos
+            setTimeout(() => {
+                withdrawMessage.textContent = '';
+            }, 3000);
+        });
+
+
+        // --- Inicialização ---
+        showView('loading-view'); // Começa mostrando o loading
+
+        // (O onAuthStateChanged irá eventualmente mudar para 'login' ou 'home')
+
+    </script>
+</body>
+
+</html>
